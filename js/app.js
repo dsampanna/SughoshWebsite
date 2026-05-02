@@ -355,7 +355,8 @@ const gavelIcon   = document.getElementById('gavel-icon');
 const gavelRipple = document.getElementById('gavel-ripple');
 const gavelCount  = document.getElementById('gavel-count');
 const gavelLabel  = document.getElementById('gavel-count-label');
-let gavelStrikes  = parseInt(localStorage.getItem('gavelStrikes') || '0', 10);
+
+const API_URL = 'http://localhost:3001/api/strikes';
 
 const gavelMilestones = {
   1:   'First strike ⚖️',
@@ -366,11 +367,30 @@ const gavelMilestones = {
   100: '100 strikes. Case closed. 🏛️',
 };
 
-// Restore saved count on load
-if (gavelCount) {
-  gavelCount.textContent = gavelStrikes.toLocaleString();
-  gavelLabel.textContent = gavelStrikes === 1 ? 'strike' : 'strikes';
+function setGavelDisplay(n) {
+  if (gavelCount) gavelCount.textContent = Number(n).toLocaleString();
+  if (gavelLabel) gavelLabel.textContent = n === 1 ? 'strike' : 'strikes';
 }
+
+function popGavelNum() {
+  if (!gavelCount) return;
+  gavelCount.classList.remove('pop');
+  void gavelCount.offsetWidth;
+  gavelCount.classList.add('pop');
+  setTimeout(() => gavelCount.classList.remove('pop'), 150);
+}
+
+/* On load — fetch count from backend, fall back to localStorage */
+fetch(API_URL)
+  .then(r => r.json())
+  .then(data => {
+    setGavelDisplay(data.strikes);
+    localStorage.setItem('gavelStrikes', data.strikes);
+  })
+  .catch(() => {
+    // Backend offline — use localStorage
+    setGavelDisplay(parseInt(localStorage.getItem('gavelStrikes') || '0', 10));
+  });
 
 if (gavelCard) {
   gavelCard.addEventListener('click', () => {
@@ -382,24 +402,23 @@ if (gavelCard) {
       gavelRipple.classList.remove('active');
     }, 480);
 
-    // Increment counter + persist
-    gavelStrikes++;
-    localStorage.setItem('gavelStrikes', gavelStrikes);
-    gavelCount.textContent = gavelStrikes.toLocaleString();
-
-    // Singular/plural label
-    gavelLabel.textContent = gavelStrikes === 1 ? 'strike' : 'strikes';
-
-    // Pop animation on number
-    gavelCount.classList.remove('pop');
-    void gavelCount.offsetWidth; // reflow to restart
-    gavelCount.classList.add('pop');
-    setTimeout(() => gavelCount.classList.remove('pop'), 150);
-
-    // Milestone toast
-    if (gavelMilestones[gavelStrikes]) {
-      showGavelToast(gavelMilestones[gavelStrikes]);
-    }
+    /* POST to backend — increment on server */
+    fetch(API_URL, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        setGavelDisplay(data.strikes);
+        localStorage.setItem('gavelStrikes', data.strikes);
+        popGavelNum();
+        if (gavelMilestones[data.strikes]) showGavelToast(gavelMilestones[data.strikes]);
+      })
+      .catch(() => {
+        // Backend offline — fall back to localStorage
+        let n = parseInt(localStorage.getItem('gavelStrikes') || '0', 10) + 1;
+        localStorage.setItem('gavelStrikes', n);
+        setGavelDisplay(n);
+        popGavelNum();
+        if (gavelMilestones[n]) showGavelToast(gavelMilestones[n]);
+      });
   });
 }
 
