@@ -392,8 +392,22 @@ fetch(API_URL)
     setGavelDisplay(parseInt(localStorage.getItem('gavelStrikes') || '0', 10));
   });
 
-/* Gavel knock sound — generated via Web Audio API (no file needed) */
+/* Gavel sound — uses audio file if available, falls back to Web Audio synth */
+const gavelAudio = new Audio('assets/sounds/gavel.mp3');
+gavelAudio.volume = 0.85;
+
 function playGavelSound() {
+  // Try real audio file first
+  if (gavelAudio.src && gavelAudio.readyState >= 2) {
+    gavelAudio.currentTime = 0;
+    gavelAudio.play().catch(() => playGavelSynth());
+    return;
+  }
+  playGavelSynth();
+}
+
+/* Fallback — Web Audio API synth */
+function playGavelSynth() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -446,6 +460,7 @@ function playGavelSound() {
     // Audio not supported — fail silently
   }
 }
+
 
 if (gavelCard) {
   gavelCard.addEventListener('click', () => {
