@@ -392,8 +392,66 @@ fetch(API_URL)
     setGavelDisplay(parseInt(localStorage.getItem('gavelStrikes') || '0', 10));
   });
 
+/* Gavel knock sound — generated via Web Audio API (no file needed) */
+function playGavelSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Low thud — body of the knock
+    const thud = ctx.createOscillator();
+    const thudGain = ctx.createGain();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(120, ctx.currentTime);
+    thud.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.18);
+    thudGain.gain.setValueAtTime(1.0, ctx.currentTime);
+    thudGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    thud.connect(thudGain);
+    thudGain.connect(ctx.destination);
+    thud.start(ctx.currentTime);
+    thud.stop(ctx.currentTime + 0.22);
+
+    // Sharp crack on top
+    const crack = ctx.createOscillator();
+    const crackGain = ctx.createGain();
+    crack.type = 'square';
+    crack.frequency.setValueAtTime(900, ctx.currentTime);
+    crack.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.06);
+    crackGain.gain.setValueAtTime(0.35, ctx.currentTime);
+    crackGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    crack.connect(crackGain);
+    crackGain.connect(ctx.destination);
+    crack.start(ctx.currentTime);
+    crack.stop(ctx.currentTime + 0.08);
+
+    // Wood resonance noise
+    const bufferSize = ctx.sampleRate * 0.15;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1);
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.value = 300;
+    noiseFilter.Q.value = 0.8;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.25, ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(ctx.currentTime);
+    noise.stop(ctx.currentTime + 0.15);
+  } catch (e) {
+    // Audio not supported — fail silently
+  }
+}
+
 if (gavelCard) {
   gavelCard.addEventListener('click', () => {
+    // Sound
+    playGavelSound();
+
     // Swing animation
     gavelIcon.style.transform = 'rotate(-40deg) scale(1.35)';
     gavelRipple.classList.add('active');
