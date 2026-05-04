@@ -900,6 +900,19 @@ em {
   font-style: italic;
   font-size: 0.7rem !important;
 }
+.footer__credit {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.footer__credit a {
+  color: var(--gold);
+  font-weight: 600;
+  transition: color var(--transition);
+}
+.footer__credit a:hover {
+  color: var(--teal);
+}
 
 /* ===========================
    STICKY CTA
